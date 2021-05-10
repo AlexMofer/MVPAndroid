@@ -1,0 +1,117 @@
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+final Properties pp = new Properties()
+pp.load(project.file("/pom.properties").newDataInputStream())
+
+final Properties sp = new Properties()
+sp.load(project.file("../secret.properties").newDataInputStream())
+
+version = android.defaultConfig.versionName
+archivesBaseName = pp.getProperty("POM_ARTIFACT_ID")
+group = pp.getProperty("POM_GROUP_ID")
+
+afterEvaluate { project ->
+    publishing {
+        repositories {
+            maven {
+                url = android.defaultConfig.versionName.contains("SNAPSHOT") ?
+                        pp.getProperty("SNAPSHOT_REPOSITORY_URL",
+                                "https://s01.oss.sonatype.org/content/repositories/snapshots/")
+                        :
+                        pp.getProperty("RELEASE_REPOSITORY_URL",
+                                "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+
+                credentials(PasswordCredentials) {
+                    username = sp.getProperty("NEXUS_USERNAME")
+                    password = sp.getProperty("NEXUS_PASSWORD")
+                }
+            }
+        }
+    }
+
+    task androidJavadocs(type: Javadoc) {
+        source = android.sourceSets.main.java.source
+        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+        excludes = ['**/*.kt']
+    }
+
+    task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+        archiveClassifier.set("javadoc")
+        from androidJavadocs.destinationDir
+    }
+
+    task androidSourcesJar(type: Jar) {
+        archiveClassifier.set("sources")
+        from android.sourceSets.main.java.source
+    }
+
+
+
+    if (JavaVersion.current().isJava8Compatible()) {
+        allprojects {
+            tasks.withType(Javadoc) {
+                options.addStringOption('Xdoclint:none', '-quiet')
+            }
+        }
+    }
+
+    if (JavaVersion.current().isJava9Compatible()) {
+        allprojects {
+            tasks.withType(Javadoc) {
+                options.addBooleanOption('html5', true)
+            }
+        }
+    }
+
+    artifacts {
+        archives androidSourcesJar, androidJavadocsJar
+    }
+
+    android.libraryVariants.all { variant ->
+        tasks.androidJavadocs.doFirst {
+            classpath += files(variant.javaCompileProvider.get().classpath.files.join(File.pathSeparator))
+        }
+    }
+
+    publishing.publications.all { publication ->
+        publication.groupId = pp.getProperty("POM_GROUP_ID")
+        publication.artifactId = pp.getProperty("POM_ARTIFACT_ID")
+        publication.version = android.defaultConfig.versionName
+        publication.artifact androidSourcesJar, androidJavadocsJar
+        {
+            pom ->
+                pom.name = pp.getProperty("POM_NAME")
+                pom.packaging = pp.getProperty("POM_PACKAGING")
+                pom.description = pp.getProperty("POM_DESCRIPTION")
+                pom.url = pp.getProperty("POM_URL")
+
+                pom.scm {
+                    url = pp.getProperty("POM_SCM_URL")
+                    connection = pp.getProperty("POM_SCM_CONNECTION")
+                    developerConnection = pp.getProperty("POM_SCM_DEV_CONNECTION")
+                }
+
+                pom.licenses {
+                    license {
+                        name = pp.getProperty("POM_LICENCE_NAME")
+                        url = pp.getProperty("POM_LICENCE_URL")
+                        distribution = pp.getProperty("POM_LICENCE_DIST")
+                    }
+                }
+
+                pom.developers {
+                    developer {
+                        id = pp.getProperty("POM_DEVELOPER_ID")
+                        name = pp.getProperty("POM_DEVELOPER_NAME")
+                    }
+                }
+        }
+    }
+
+    signing {
+        publishing.publications.all { publication ->
+            sign publication
+        }
+    }
+}
