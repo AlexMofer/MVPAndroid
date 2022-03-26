@@ -20,8 +20,6 @@ import android.content.Context;
 import androidx.annotation.ContentView;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 
@@ -35,9 +33,7 @@ import com.am.mvp.core.MVPViewHolder;
 public abstract class MVPFragment extends Fragment implements MVPView {
 
     private final MVPViewHolder<MVPView> mViewHolder = new MVPViewHolder<>();
-    private final LifecycleEventObserver mLifecycleEventObserver =
-            this::onLifecycleOwnerStateChanged;
-    private final Observer<LifecycleOwner> mLifecycleOwnerObserver =
+    private final Observer<LifecycleOwner> mObserver =
             this::onLifecycleOwnerChanged;
 
     public MVPFragment() {
@@ -51,30 +47,20 @@ public abstract class MVPFragment extends Fragment implements MVPView {
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        getViewLifecycleOwnerLiveData().observeForever(mLifecycleOwnerObserver);
+        getViewLifecycleOwnerLiveData().observeForever(mObserver);
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
-        getViewLifecycleOwnerLiveData().removeObserver(mLifecycleOwnerObserver);
+        getViewLifecycleOwnerLiveData().removeObserver(mObserver);
     }
 
     private void onLifecycleOwnerChanged(LifecycleOwner source) {
-        if (source != null)
-            source.getLifecycle().addObserver(mLifecycleEventObserver);
-    }
-
-    private void onLifecycleOwnerStateChanged(@NonNull LifecycleOwner source,
-                                              @NonNull Lifecycle.Event event) {
-        switch (event) {
-            case ON_CREATE:
-                mViewHolder.setView(this);
-                break;
-            case ON_DESTROY:
-                mViewHolder.setView(null);
-                source.getLifecycle().removeObserver(mLifecycleEventObserver);
-                break;
+        if (source != null) {
+            mViewHolder.setView(this);
+        } else {
+            mViewHolder.setView(null);
         }
     }
 
