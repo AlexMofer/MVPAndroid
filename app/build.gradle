@@ -3,6 +3,7 @@ plugins {
 }
 
 android {
+    namespace 'com.am.mvp.ui'
     compileSdk 33
 
     defaultConfig {
