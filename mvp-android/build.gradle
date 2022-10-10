@@ -4,7 +4,6 @@ plugins {
 
 android {
     compileSdk 33
-    namespace 'com.am.mvp.app'
 
     defaultConfig {
         minSdk 14
