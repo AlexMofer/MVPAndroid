@@ -13,7 +13,7 @@ Android的MVP设计模式。
 ```
 dependencies {
     ...
-    implementation 'io.github.alexmofer.mvp:mvp-android:1.5.1'
+    implementation 'io.github.alexmofer.mvp:mvp-android:1.6.0'
     ...
 }
 ```
